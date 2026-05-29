@@ -44,6 +44,35 @@ return {
 		capabilities = vim.tbl_deep_extend("force", capabilities, require("cmp_nvim_lsp").default_capabilities())
 
 		local servers = {
+			basedpyright = {
+				settings = {
+					basedpyright = {
+						analysis = {
+							typeCheckingMode = "standard",
+							autoSearchPaths = true,
+							useLibraryCodeForTypes = true,
+						},
+					},
+				},
+			},
+			ruff = {},
+			ansiblels = {},
+			yamlls = {
+				settings = {
+					yaml = {
+						keyOrdering = false,
+						format = { enable = true },
+						validate = true,
+						schemaStore = {
+							enable = true,
+						},
+						schemas = {
+							["https://json.schemastore.org/github-workflow.json"] = ".github/workflows/*.{yml,yaml}",
+							["https://json.schemastore.org/ansible-playbook.json"] = "*play*.{yml,yaml}",
+						},
+					},
+				},
+			},
 			lua_ls = {
 				settings = {
 					Lua = {
@@ -64,7 +93,21 @@ return {
 
 		require("mason").setup()
 		local ensure_installed = vim.tbl_keys(servers or {})
-		vim.list_extend(ensure_installed, { "stylua", "npm-groovy-lint" })
+		vim.list_extend(ensure_installed, {
+			"stylua",
+			"npm-groovy-lint",
+
+			-- Python
+			"basedpyright",
+			"ruff",
+
+			-- YAML / Ansible
+			"ansible-language-server",
+			"yaml-language-server",
+			"ansible-lint",
+			"yamllint",
+			"prettier",
+		})
 		require("mason-tool-installer").setup({ ensure_installed = ensure_installed })
 
 		require("mason-lspconfig").setup({
