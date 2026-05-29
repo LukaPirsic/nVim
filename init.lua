@@ -237,9 +237,27 @@ require("lazy").setup({
 	--    require('Comment').setup({})
 
 	-- "gc" to comment visual regions/lines
-	{ "numToStr/Comment.nvim", opts = {} },
+	-- { "numToStr/Comment.nvim", opts = {} },
+	{
+		"numToStr/Comment.nvim",
+		config = function()
+			require("Comment").setup({
+				-- /etc/hosts uses # comments. Returning this here avoids Comment.nvim
+				-- trying tree-sitter detection for the hosts filetype.
+				pre_hook = function()
+					if vim.bo.filetype == "conf" then
+						return "#%s"
+					end
+				end,
+			})
+		end,
+	},
+
 	-- Primeagen harpoon
 	"theprimeagen/harpoon",
+
+	-- ansible yaml lint
+	"erikzaadi/vim-ansible-yaml",
 
 	"tpope/vim-fugitive",
 
@@ -317,12 +335,24 @@ require("lazy").setup({
 			require("which-key").setup()
 
 			-- Document existing key chains
-			require("which-key").register({
-				["<leader>c"] = { name = "[C]ode", _ = "which_key_ignore" },
-				["<leader>d"] = { name = "[D]ocument", _ = "which_key_ignore" },
-				["<leader>r"] = { name = "[R]ename", _ = "which_key_ignore" },
-				["<leader>s"] = { name = "[S]earch", _ = "which_key_ignore" },
-				["<leader>w"] = { name = "[W]orkspace", _ = "which_key_ignore" },
+			-- require("which-key").register({
+			-- 	["<leader>c"] = { name = "[C]ode", _ = "which_key_ignore" },
+			-- 	["<leader>d"] = { name = "[D]ocument", _ = "which_key_ignore" },
+			-- 	["<leader>r"] = { name = "[R]ename", _ = "which_key_ignore" },
+			-- 	["<leader>s"] = { name = "[S]earch", _ = "which_key_ignore" },
+			-- 	["<leader>w"] = { name = "[W]orkspace", _ = "which_key_ignore" },
+			-- })
+			require("which-key").add({
+				{ "<leader>c", group = "[C]ode" },
+				{ "<leader>c_", hidden = true },
+				{ "<leader>d", group = "[D]ocument" },
+				{ "<leader>d_", hidden = true },
+				{ "<leader>r", group = "[R]ename" },
+				{ "<leader>r_", hidden = true },
+				{ "<leader>s", group = "[S]earch" },
+				{ "<leader>s_", hidden = true },
+				{ "<leader>w", group = "[W]orkspace" },
+				{ "<leader>w_", hidden = true },
 			})
 		end,
 	},
@@ -337,7 +367,7 @@ require("lazy").setup({
 	{ -- Fuzzy Finder (files, lsp, etc)
 		"nvim-telescope/telescope.nvim",
 		event = "VimEnter",
-		branch = "0.1.x",
+		--branch = "0.1.x",
 		dependencies = {
 			"nvim-lua/plenary.nvim",
 			{ -- If encountering errors, see telescope-fzf-native README for install instructions
@@ -592,8 +622,22 @@ require("lazy").setup({
 				--
 				-- But for many setups, the LSP (`tsserver`) will work just fine
 				-- tsserver = {},
-				--
-
+				-- Vue 3
+				-- volar = {},
+				-- TypeScript
+				-- ruby_ls = {},
+				-- tsserver = {
+				-- 	filetypes = { "typescript", "javascript", "javascriptreact", "typescriptreact", "vue" },
+				-- 	init_options = {
+				-- 		plugins = {
+				-- 			{
+				-- 				name = "@vue/typescript-plugin",
+				-- 				location = "/Users/lpirsic/.local/share/nvim/mason/packages/vue-language-server/node_modules/@vue/language-server",
+				-- 				languages = { "vue" },
+				-- 			},
+				-- 		},
+				-- 	},
+				-- },
 				lua_ls = {
 					-- cmd = {...},
 					-- filetypes { ...},
@@ -862,13 +906,16 @@ require("lazy").setup({
 
 	{ -- Highlight, edit, and navigate code
 		"nvim-treesitter/nvim-treesitter",
+		branch = "main",
 		build = ":TSUpdate",
+		main = "nvim-treesitter.config",
 		config = function()
 			-- [[ Configure Treesitter ]] See `:help nvim-treesitter`
 
 			---@diagnostic disable-next-line: missing-fields
-			require("nvim-treesitter.configs").setup({
-				ensure_installed = { "bash", "c", "html", "lua", "markdown", "vim", "vimdoc", "yaml", "groovy" },
+			-- require("nvim-treesitter.configs").setup({
+			require("nvim-treesitter").setup({
+				ensure_installed = { "bash", "c", "html", "lua", "markdown", "vim", "vimdoc", "yaml", "groovy", "vue" },
 				-- Autoinstall languages that are not installed
 				auto_install = true,
 				highlight = { enable = true },
@@ -902,6 +949,9 @@ require("lazy").setup({
 	--  Uncomment the following line and add your plugins to `lua/custom/plugins/*.lua` to get going.
 	--    For additional information, see `:help lazy.nvim-lazy.nvim-structuring-your-plugins`
 	-- { import = 'custom.plugins' },
+	{
+		"LunarVim/bigfile.nvim",
+	},
 
 	-- [[ Install and Configure vim-tmux-navigator ]]
 	{
@@ -925,7 +975,7 @@ local harpoon = require("harpoon")
 harpoon:setup()
 
 vim.keymap.set("n", "<leader>a", function()
-	harpoon:list():append()
+	harpoon:list():add()
 end)
 vim.keymap.set("n", "<C-e>", function()
 	harpoon.ui:toggle_quick_menu(harpoon:list())
@@ -959,3 +1009,25 @@ map <leader>pv :Explore<CR>
 
 -- Quickfix list
 -- in telescope search, tab wanted files and press <C-q>
+--
+-- Treat /etc/hosts as a hash-commented config file.
+-- This makes Comment.nvim use '# ' when commenting lines in /etc/hosts.
+vim.api.nvim_create_autocmd({ "BufRead", "BufNewFile" }, {
+	pattern = { "/etc/hosts", "*/hosts" },
+	callback = function()
+		vim.bo.filetype = "conf"
+		vim.bo.commentstring = "# %s"
+	end,
+})
+
+-- Comment current line with <leader>gc.
+-- Works in /etc/hosts because of the commentstring autocmd above.
+-- vim.keymap.set("n", "<leader>gc", function()
+-- 	require("Comment.api").toggle.linewise.current()
+-- end, { desc = "Toggle comment current line" })
+
+-- Comment selected lines with <leader>gc in visual mode.
+vim.keymap.set("x", "<leader>gc", function()
+	vim.api.nvim_feedkeys(vim.api.nvim_replace_termcodes("<Esc>", true, false, true), "nx", false)
+	require("Comment.api").toggle.linewise(vim.fn.visualmode())
+end, { desc = "Toggle comment selection" })
